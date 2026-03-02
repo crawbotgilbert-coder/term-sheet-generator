@@ -1,0 +1,17 @@
+borrower_name: Atlas Copper Holdings
+jurisdiction: UAE
+facility_type: HoldCo Term Loan B
+facility_size: 250
+currency: USD
+use_of_proceeds: Acquisition of 35% stake in Cerro Verde Expansion
+margin_bps: 425
+sofr_floor: 1.50
+upfront_fee_pct: 1.0
+commitment_fee_pct: 0.75
+leverage_limit: 3.25
+cure_period_days: 30
+min_liquidity: 35
+hedging_pct: 70
+hedging_months: 18
+cross_default_threshold: 25
+signing_date: 2026-03-05

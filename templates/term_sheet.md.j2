@@ -1,0 +1,32 @@
+# Term Sheet — {{ deal.borrower_name }} / {{ deal.facility_type }}
+
+**Date:** {{ deal.date }}  
+**Prepared by:** Metals & Mining Investments
+
+## 1. Transaction Overview
+{% for field in overview_fields %}
+- **{{ field.label }}:** {{ field.value }}
+{% endfor %}
+
+## 2. Pricing & Economics
+{% for clause in pricing_clauses %}
+- **{{ clause.label }}:** {{ clause.body }}
+{% endfor %}
+
+## 3. Covenants
+{% for clause in covenant_clauses %}
+- **{{ clause.label }}:** {{ clause.body }}
+{% endfor %}
+
+## 4. Security Package
+{% for clause in security_clauses %}
+- **{{ clause.label }}:** {{ clause.body }}
+{% endfor %}
+
+## 5. Events of Default
+{% for clause in eod_clauses %}
+- **{{ clause.label }}:** {{ clause.body }}
+{% endfor %}
+
+---
+_Built with term-sheet-generator (commit {{ commit_sha }})_
