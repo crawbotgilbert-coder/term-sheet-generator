@@ -1,17 +1,66 @@
-borrower_name: Atlas Copper Holdings
-jurisdiction: UAE
-facility_type: HoldCo Term Loan B
-facility_size: 250
-currency: USD
-use_of_proceeds: Acquisition of 35% stake in Cerro Verde Expansion
-margin_bps: 425
-sofr_floor: 1.50
-upfront_fee_pct: 1.0
-commitment_fee_pct: 0.75
-leverage_limit: 3.25
-cure_period_days: 30
-min_liquidity: 35
-hedging_pct: 70
-hedging_months: 18
-cross_default_threshold: 25
-signing_date: 2026-03-05
+header:
+  confidentiality: STRICTLY PRIVATE & CONFIDENTIAL
+  subject: SUBJECT TO CONTRACT
+addressee:
+  lines:
+    - Board of Directors
+    - KGL Resources Limited
+    - Level 7, 167 Eagle Street
+    - Brisbane QLD 4000, Australia
+  date: 6 February 2026
+project_title: Project Kairos – Jervois Base Metal Project (the "Term Sheet")
+salutation: Dear Board Members,
+summary_intro: >-
+  Mercuria proposes the following junior facility and aligned offtake arrangements to bridge the remaining capital expenditure for the Jervois base metals project once equity and senior streaming facilities are fully drawn.
+project_overview:
+  sponsor: KGL Resources Limited ("KGL")
+  project: Development of the Jervois copper concentrate project in the Northern Territory, Australia.
+  facility: USD 50,000,000 junior second-lien term loan (the "Facility").
+  use_of_proceeds: Last-mile construction spend and commissioning contingency.
+  draw_sequence: Junior Facility is drawn only after equity and senior stream commitments have been utilised.
+funding_table:
+  sources:
+    - name: Project Equity
+      amount: 111
+    - name: Senior Stream Facilities
+      amount: 333
+    - name: Junior Facility (Mercuria)
+      amount: 50
+    - name: Standby Overrun Facility
+      amount: 37
+  uses:
+    - name: Project CAPEX
+      amount: 364
+    - name: OC Mining & Commissioning
+      amount: 130
+    - name: Cost Overrun Contingency
+      amount: 37
+facility_highlights:
+  - "Borrower: KGL Resources Limited (or a designated holdco) with guarantees from key project subsidiaries."
+  - "Currency: USD."
+  - "Availability: Single or multiple utilisations during the construction window, subject to conditions precedent."
+  - "Ranking: Second lien behind the senior streaming package with terms governed by an intercreditor agreement."
+  - "Repayment: Monthly amortisation via offtake deductions after the grace period."
+pricing_clauses:
+  - kgl_junior
+covenant_clauses:
+  - coverage_ratio
+  - cash_sweep
+  - negative_pledge
+  - sanctions
+  - project_mac
+security_clauses:
+  - kisenda_first_lien
+cp_clauses:
+  - project_prepayment
+offtake_clauses:
+  - restructure_ack
+governing_law_clause: english_default
+disclaimer_clause: non_binding
+binding_clauses:
+  - confidentiality
+  - exclusivity
+  - fees_expenses
+closing_block:
+  signoff: Yours faithfully,
+  lender: Mercuria Asia Group Holdings (Pte.) Ltd

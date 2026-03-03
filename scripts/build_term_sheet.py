@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Assemble a term sheet from a deal spec + clause catalog."""
+"""Assemble a metals term sheet from a deal spec + clause catalog."""
 
 import argparse
 import datetime as dt
 import hashlib
 import json
-import os
 from pathlib import Path
 
 import markdown
@@ -17,34 +16,13 @@ MODULES_PATH = REPO_ROOT / "modules/clauses.yaml"
 TEMPLATE_PATH = REPO_ROOT / "templates/term_sheet.md.j2"
 OUTPUT_DIR = REPO_ROOT / "outputs"
 
+
 def load_yaml(path: Path):
     with path.open() as fh:
         return yaml.safe_load(fh)
 
 
-def format_overview_fields(section_meta: dict, deal: dict):
-    fields = []
-    for field in section_meta.get("fields", []):
-        template = field.get("template", "{value}")
-        value = template.format(**deal)
-        fields.append({"label": field.get("label", field.get("key")), "value": value})
-    return fields
-
-
-def fill_clauses(section_meta: dict, deal: dict):
-    filled = []
-    for clause in section_meta.get("clauses", []):
-        body_template = clause.get("body", "")
-        try:
-            body = body_template.format(**deal)
-        except KeyError as exc:
-            missing = exc.args[0]
-            body = f"[MISSING: {missing}] {body_template}"
-        filled.append({"label": clause.get("label", clause.get("id")), "body": body})
-    return filled
-
-
-def get_commit_hash():
+def get_commit_hash() -> str:
     head = REPO_ROOT / ".git/HEAD"
     if not head.exists():
         return "workspace"
@@ -55,24 +33,80 @@ def get_commit_hash():
     return ref[:7]
 
 
-def render_template(deal: dict, modules: dict):
-    env = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH.parent)))
+def gather_clauses(modules: dict, category: str, keys: list[str]):
+    catalog = modules.get(category, {})
+    block = []
+    for key in keys or []:
+        clause = catalog.get(key)
+        if not clause:
+            block.append({"title": f"[{key} not found]", "body": ""})
+            continue
+        block.append({"title": clause.get("title", key), "body": clause.get("body", "")})
+    return block
+
+
+def compute_funding_table(table_data: dict):
+    sources = table_data.get("sources", [])
+    uses = table_data.get("uses", [])
+    sources_total = sum(item.get("amount", 0) for item in sources)
+    uses_total = sum(item.get("amount", 0) for item in uses)
+    max_rows = max(len(sources), len(uses))
+    rows = []
+    for idx in range(max_rows):
+        rows.append(
+            {
+                "source": sources[idx] if idx < len(sources) else {},
+                "use": uses[idx] if idx < len(uses) else {},
+            }
+        )
+    return {
+        "rows": rows,
+        "sources_total": sources_total,
+        "uses_total": uses_total,
+    }
+
+
+def build_context(deal: dict, modules: dict):
+    return {
+        "header": deal.get("header", {}),
+        "addressee": deal.get("addressee", {}),
+        "project_title": deal.get("project_title"),
+        "salutation": deal.get("salutation"),
+        "summary_intro": deal.get("summary_intro"),
+        "project_overview": deal.get("project_overview", {}),
+        "funding_table": compute_funding_table(deal.get("funding_table", {})),
+        "facility_highlights": deal.get("facility_highlights", []),
+        "pricing_clauses": gather_clauses(modules, "pricing", deal.get("pricing_clauses", [])),
+        "covenant_clauses": gather_clauses(modules, "covenants", deal.get("covenant_clauses", [])),
+        "security_clauses": gather_clauses(modules, "security", deal.get("security_clauses", [])),
+        "cp_clauses": gather_clauses(modules, "conditions_precedent", deal.get("cp_clauses", [])),
+        "offtake_clauses": gather_clauses(modules, "offtake", deal.get("offtake_clauses", [])),
+        "governing_law": gather_clauses(modules, "governing_law", [deal.get("governing_law_clause")]),
+        "disclaimer": gather_clauses(modules, "disclaimers", [deal.get("disclaimer_clause")]),
+        "binding_sections": gather_clauses(modules, "binding", deal.get("binding_clauses", [])),
+        "closing_block": deal.get("closing_block", {}),
+        "commit_sha": get_commit_hash(),
+    }
+
+
+def render_markdown(context: dict):
+    env = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH.parent)), trim_blocks=True, lstrip_blocks=True)
     template = env.get_template(TEMPLATE_PATH.name)
-    sections = modules["sections"]
-    return template.render(
-        deal=deal,
-        overview_fields=format_overview_fields(sections["transaction-overview"], deal),
-        pricing_clauses=fill_clauses(sections["pricing"], deal),
-        covenant_clauses=fill_clauses(sections["covenants"], deal),
-        security_clauses=fill_clauses(sections["security"], deal),
-        eod_clauses=fill_clauses(sections["events-of-default"], deal),
-        commit_sha=get_commit_hash(),
-    )
+    return template.render(**context)
 
 
-def write_outputs(markdown_body: str, deal_name: str):
+def slugify(value: str) -> str:
+    import re
+
+    if not value:
+        return "term-sheet"
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower())
+    return slug.strip("-") or "term-sheet"
+
+
+def write_outputs(markdown_body: str, slug: str):
     OUTPUT_DIR.mkdir(exist_ok=True)
-    safe_name = deal_name.lower().replace(" ", "-")
+    safe_name = slugify(slug)
     timestamp = dt.datetime.now().strftime("%Y%m%d-%H%M")
     md_path = OUTPUT_DIR / f"{safe_name}-{timestamp}.md"
     html_path = OUTPUT_DIR / f"{safe_name}-{timestamp}.html"
@@ -97,12 +131,14 @@ def main():
 
     deal = load_yaml(args.deal_file)
     modules = load_yaml(MODULES_PATH)
+    context = build_context(deal, modules)
 
-    markdown_body = render_template(deal, modules)
-    md_path, html_path = write_outputs(markdown_body, deal["borrower_name"])
+    markdown_body = render_markdown(context)
+    slug = deal.get("project_title", "term-sheet")
+    md_path, html_path = write_outputs(markdown_body, slug)
 
     summary = {
-        "deal": deal["borrower_name"],
+        "project": deal.get("project_title"),
         "markdown": str(md_path),
         "html": str(html_path),
         "markdown_sha": checksum(md_path),

@@ -1,32 +1,83 @@
-# Term Sheet — {{ deal.borrower_name }} / {{ deal.facility_type }}
+{{ header.confidentiality }}
+{{ header.subject }}
 
-**Date:** {{ deal.date }}  
-**Prepared by:** Metals & Mining Investments
+{% for line in addressee.lines %}{{ line }}  
+{% endfor %}
+{{ addressee.date }}
 
-## 1. Transaction Overview
-{% for field in overview_fields %}
-- **{{ field.label }}:** {{ field.value }}
+{{ project_title }}
+
+{{ salutation }}
+
+{{ summary_intro }}
+
+## Section 1. Parties & Scope
+- **Sponsor:** {{ project_overview.sponsor }}
+- **Project:** {{ project_overview.project }}
+- **Facility:** {{ project_overview.facility }}
+- **Use of Proceeds:** {{ project_overview.use_of_proceeds }}
+- **Draw Sequence:** {{ project_overview.draw_sequence }}
+
+## Section 2. Funding Plan
+| Sources | Amount (USD m) | Uses | Amount (USD m) |
+| --- | ---: | --- | ---: |
+{% for row in funding_table.rows %}| {{ row.source.name or '' }} | {{ row.source.amount if row.source.name else '' }} | {{ row.use.name or '' }} | {{ row.use.amount if row.use.name else '' }} |
+{% endfor %}| **Total** | **{{ "%.0f"|format(funding_table.sources_total) }}** | **Total** | **{{ "%.0f"|format(funding_table.uses_total) }}** |
+
+## Section 3. Facility Highlights
+{% for item in facility_highlights %}- {{ item }}
 {% endfor %}
 
-## 2. Pricing & Economics
+## Section 4. Pricing & Fees
 {% for clause in pricing_clauses %}
-- **{{ clause.label }}:** {{ clause.body }}
+**{{ clause.title }}**  
+{{ clause.body }}
 {% endfor %}
 
-## 3. Covenants
+## Section 5. Covenants & Undertakings
 {% for clause in covenant_clauses %}
-- **{{ clause.label }}:** {{ clause.body }}
+**{{ clause.title }}**  
+{{ clause.body }}
 {% endfor %}
 
-## 4. Security Package
+## Section 6. Security Package
 {% for clause in security_clauses %}
-- **{{ clause.label }}:** {{ clause.body }}
+**{{ clause.title }}**  
+{{ clause.body }}
 {% endfor %}
 
-## 5. Events of Default
-{% for clause in eod_clauses %}
-- **{{ clause.label }}:** {{ clause.body }}
+## Section 7. Conditions Precedent
+{% for clause in cp_clauses %}
+**{{ clause.title }}**  
+{{ clause.body }}
 {% endfor %}
+
+## Section 8. Offtake Integration
+{% for clause in offtake_clauses %}
+**{{ clause.title }}**  
+{{ clause.body }}
+{% endfor %}
+
+## Section 9. Governing Law & Jurisdiction
+{% for clause in governing_law %}
+**{{ clause.title }}**  
+{{ clause.body }}
+{% endfor %}
+
+## Binding Provisions
+{% for clause in binding_sections %}
+**{{ clause.title }}**  
+{{ clause.body }}
+{% endfor %}
+
+## Disclaimer
+{% for clause in disclaimer %}
+**{{ clause.title }}**  
+{{ clause.body }}
+{% endfor %}
+
+{{ closing_block.signoff }}  
+{{ closing_block.lender }}
 
 ---
 _Built with term-sheet-generator (commit {{ commit_sha }})_
