@@ -1,64 +1,50 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { buildMarkdown } from "../lib/markdown";
 
-const defaultState = {
+const STORAGE_KEY = "term-sheet-builder-state-v2";
+const STORAGE_PRESET_KEY = "term-sheet-builder-preset-v2";
+
+const fallbackState = {
   headerConfidentiality: "STRICTLY PRIVATE & CONFIDENTIAL",
   headerSubject: "SUBJECT TO CONTRACT",
-  addresseeLines: [
-    "Board of Directors",
-    "KGL Resources Limited",
-    "Level 7, 167 Eagle Street",
-    "Brisbane QLD 4000, Australia",
-  ],
-  dateLine: "6 February 2026",
-  projectTitle: 'Project Kairos – Jervois Base Metal Project (the "Term Sheet")',
+  addresseeLines: ["Board of Directors", "Company Name", "Address Line", "City"],
+  dateLine: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
+  projectTitle: "Metals Project – Term Sheet",
   salutation: "Dear Board Members,",
-  summaryIntro:
-    "Mercuria proposes the following junior facility and aligned offtake arrangements to bridge the remaining capital expenditure for the Jervois base metals project once equity and senior streaming facilities are fully drawn.",
+  summaryIntro: "This workspace lets you assemble indicative financing and offtake term sheets using reusable clause modules.",
   projectOverview: {
-    sponsor: 'KGL Resources Limited ("KGL")',
-    project: "Development of the Jervois copper concentrate project in the Northern Territory, Australia.",
-    facility: 'USD 50,000,000 junior second-lien term loan (the "Facility").',
-    use_of_proceeds: "Last-mile construction spend and commissioning contingency.",
-    draw_sequence: "Junior Facility is drawn only after equity and senior stream commitments have been utilised.",
+    sponsor: "Sponsor Name",
+    project: "Asset description and jurisdiction.",
+    facility: "USD 0,000,000 facility description.",
+    use_of_proceeds: "Key uses.",
+    draw_sequence: "Draw sequence logic.",
   },
   sources: [
-    { name: "Project Equity", amount: 111 },
-    { name: "Senior Stream Facilities", amount: 333 },
-    { name: "Junior Facility (Mercuria)", amount: 50 },
-    { name: "Standby Overrun Facility", amount: 37 },
+    { name: "Equity", amount: 0 },
+    { name: "Mercuria Facility", amount: 0 },
   ],
   uses: [
-    { name: "Project CAPEX", amount: 364 },
-    { name: "OC Mining & Commissioning", amount: 130 },
-    { name: "Cost Overrun Contingency", amount: 37 },
+    { name: "Project CAPEX", amount: 0 },
+    { name: "Fees", amount: 0 },
   ],
   facilityHighlights: [
-    "Borrower: KGL Resources Limited (or a designated holdco) with guarantees from key project subsidiaries.",
-    "Currency: USD.",
-    "Availability: Single or multiple utilisations during the construction window, subject to conditions precedent.",
-    "Ranking: Second lien behind the senior streaming package with terms governed by an intercreditor agreement.",
-    "Repayment: Monthly amortisation via offtake deductions after the grace period.",
+    "Borrower: Holding company with guarantees from operating subsidiaries.",
+    "Ranking: Second lien behind committed senior debt.",
   ],
-  pricingKeys: ["kgl_junior"],
-  covenantKeys: ["coverage_ratio", "cash_sweep", "negative_pledge", "sanctions", "project_mac"],
-  securityKeys: ["kisenda_first_lien"],
-  cpKeys: ["project_prepayment"],
-  offtakeKeys: ["restructure_ack"],
+  pricingKeys: [],
+  covenantKeys: [],
+  securityKeys: [],
+  cpKeys: [],
+  offtakeKeys: [],
   governingLawKey: "english_default",
   disclaimerKey: "non_binding",
-  bindingKeys: ["confidentiality", "exclusivity", "fees_expenses"],
-  closing: {
-    signoff: "Yours faithfully,",
-    lender: "Mercuria Asia Group Holdings (Pte.) Ltd",
-  },
+  bindingKeys: ["confidentiality"],
+  closing: { signoff: "Yours faithfully,", lender: "Mercuria" },
 };
-
-const slugify = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "term-sheet";
 
 const SectionCard = ({ title, description, children }) => (
   <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
@@ -127,14 +113,17 @@ const ClauseCheckboxes = ({ label, options, selected, onToggle }) => (
     <p className="text-sm font-semibold text-slate-700">{label}</p>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       {options.map((option) => (
-        <label key={option.value} className="inline-flex items-center gap-2 text-sm text-slate-700">
+        <label key={option.value} className="inline-flex items-start gap-2 text-sm text-slate-700">
           <input
             type="checkbox"
             checked={selected.includes(option.value)}
             onChange={() => onToggle(option.value)}
-            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            className="mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
           />
-          {option.label}
+          <span>
+            {option.label}
+            {option.hint && <span className="block text-xs text-slate-400">{option.hint}</span>}
+          </span>
         </label>
       ))}
     </div>
@@ -158,39 +147,105 @@ const SingleSelect = ({ label, value, options, onChange }) => (
   </label>
 );
 
-export default function TermSheetBuilder({ catalog }) {
-  const [state, setState] = useState(defaultState);
+const deepClone = (value) => JSON.parse(JSON.stringify(value));
+
+export default function TermSheetBuilder({ catalog, presets = [] }) {
+  const baseState = presets[0]?.state ?? fallbackState;
+  const [state, setState] = useState(deepClone(baseState));
+  const [selectedPreset, setSelectedPreset] = useState(presets[0]?.id ?? "custom");
   const [isExporting, setIsExporting] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  const updateArrayField = (key, value) => {
-    setState((prev) => ({ ...prev, [key]: value.split("\n").map((line) => line.trim()).filter(Boolean) }));
-  };
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    const storedPreset = window.localStorage.getItem(STORAGE_PRESET_KEY);
+    if (stored) {
+      try {
+        setState(JSON.parse(stored));
+        setSelectedPreset(storedPreset || "custom");
+      } catch (error) {
+        console.warn("Failed to parse stored term sheet state", error);
+      }
+    }
+    setIsHydrated(true);
+  }, []);
 
-  const toggleClause = (key, value) => {
+  useEffect(() => {
+    if (!isHydrated || typeof window === "undefined") return;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    window.localStorage.setItem(STORAGE_PRESET_KEY, selectedPreset);
+  }, [state, selectedPreset, isHydrated]);
+
+  const mutateState = (updater, preservePreset = false) => {
     setState((prev) => {
-      const set = new Set(prev[key]);
-      set.has(value) ? set.delete(value) : set.add(value);
-      return { ...prev, [key]: Array.from(set) };
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      return next;
     });
+    if (!preservePreset) {
+      setSelectedPreset("custom");
+    }
   };
 
-  const updateFundingRow = (type, index, nextRow) => {
-    setState((prev) => {
+  const applyPreset = (id) => {
+    const preset = presets.find((item) => item.id === id);
+    if (!preset) return;
+    setState(deepClone(preset.state));
+    setSelectedPreset(id);
+  };
+
+  const resetToDefault = () => {
+    setState(deepClone(baseState));
+    setSelectedPreset(presets[0]?.id ?? "custom");
+  };
+
+  const addFundingRow = (type) =>
+    mutateState((prev) => ({ ...prev, [type]: [...prev[type], { name: "", amount: 0 }] }));
+
+  const updateFundingRow = (type, index, nextRow) =>
+    mutateState((prev) => {
       const rows = [...prev[type]];
       rows[index] = nextRow;
       return { ...prev, [type]: rows };
     });
-  };
 
-  const addFundingRow = (type) => {
-    setState((prev) => ({ ...prev, [type]: [...prev[type], { name: "", amount: 0 }] }));
-  };
-
-  const markdown = useMemo(() => buildMarkdown(state, catalog), [state, catalog]);
-  const fileSlug = slugify(state.projectTitle);
+  const updateArrayField = (key, value) =>
+    mutateState((prev) => ({ ...prev, [key]: value.split("\n").map((line) => line.trim()).filter(Boolean) }));
 
   const clauseOptions = (section) =>
-    Object.entries(catalog[section] || {}).map(([value, clause]) => ({ value, label: clause.title }));
+    Object.entries(catalog[section] || {}).map(([value, clause]) => ({
+      value,
+      label: clause.title,
+      hint: clause.source || clause.description || "",
+    }));
+
+  const singleOptions = (section) =>
+    Object.entries(catalog[section] || {}).map(([value, clause]) => ({
+      value,
+      label: clause.title,
+    }));
+
+  const markdown = useMemo(() => buildMarkdown(state, catalog), [state, catalog]);
+  const fileSlug = useMemo(
+    () => state.projectTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "term-sheet",
+    [state.projectTitle]
+  );
+
+  const stats = useMemo(() => {
+    const totalSources = state.sources.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+    const totalUses = state.uses.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+    return {
+      clausesSelected:
+        state.pricingKeys.length +
+        state.covenantKeys.length +
+        state.securityKeys.length +
+        state.cpKeys.length +
+        state.offtakeKeys.length,
+      bindingCount: state.bindingKeys.length,
+      totalSources,
+      totalUses,
+    };
+  }, [state]);
 
   const downloadMarkdown = () => {
     const blob = new Blob([markdown], { type: "text/markdown" });
@@ -226,119 +281,153 @@ export default function TermSheetBuilder({ catalog }) {
     }
   };
 
+  const presetOptions = [{ value: "custom", label: "Custom / Autosaved" }, ...presets.map((preset) => ({ value: preset.id, label: preset.label }))];
+
   return (
     <main className="min-h-screen bg-slate-100 py-8">
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         <header className="mb-8 flex flex-col gap-2">
           <p className="text-sm font-semibold text-indigo-600">Metals Term Sheet Studio</p>
           <h1 className="text-3xl font-semibold text-slate-900">Deal Composer</h1>
-          <p className="text-slate-600 max-w-2xl">
-            Capture the header, funding plan, and clause selections on the left. Preview the formatted term sheet and export Markdown or DOCX on the right.
+          <p className="text-slate-600 max-w-3xl">
+            Inspired by best-in-class tools like Wilson Sonsini’s venture generators, this workspace keeps your parameters, clause picks, and
+            formatting in sync. Autosave restores unfinished drafts, and presets let you jump between reference deals instantly.
           </p>
         </header>
-        <div className="grid gap-8 lg:grid-cols-[420px_1fr] items-start">
+
+        <div className="grid gap-8 lg:grid-cols-[430px_1fr] items-start">
           <div className="space-y-6">
+            <SectionCard title="Presets & Autosave" description="Load a precedent or continue where you left off.">
+              <div className="grid gap-4">
+                <SingleSelect
+                  label="Deal Preset"
+                  value={selectedPreset}
+                  options={presetOptions}
+                  onChange={(id) => {
+                    if (id === "custom") {
+                      setSelectedPreset("custom");
+                      return;
+                    }
+                    applyPreset(id);
+                  }}
+                />
+                <div className="flex flex-wrap gap-3 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => applyPreset(selectedPreset)}
+                    disabled={!presets.find((preset) => preset.id === selectedPreset)}
+                    className="rounded-xl border border-slate-300 px-3 py-2 font-semibold text-slate-700 disabled:opacity-40"
+                  >
+                    Reload preset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetToDefault}
+                    className="rounded-xl border border-slate-300 px-3 py-2 font-semibold text-slate-700"
+                  >
+                    Reset to default
+                  </button>
+                  <span className="text-slate-400 self-center">Autosaves locally every edit</span>
+                </div>
+              </div>
+            </SectionCard>
+
             <SectionCard title="Letter Header" description="Confidentiality lines, address block, summary intro">
               <div className="space-y-4">
-                <InputField
-                  label="Confidentiality Line"
-                  value={state.headerConfidentiality}
-                  onChange={(value) => setState((prev) => ({ ...prev, headerConfidentiality: value }))}
-                />
-                <InputField
-                  label="Subject Line"
-                  value={state.headerSubject}
-                  onChange={(value) => setState((prev) => ({ ...prev, headerSubject: value }))}
-                />
-                <TextAreaField
-                  label="Addressee Lines"
-                  value={state.addresseeLines.join("\n")}
-                  onChange={(text) => updateArrayField("addresseeLines", text)}
-                  rows={4}
-                />
-                <InputField label="Date" value={state.dateLine} onChange={(value) => setState((prev) => ({ ...prev, dateLine: value }))} />
-                <InputField label="Project Title" value={state.projectTitle} onChange={(value) => setState((prev) => ({ ...prev, projectTitle: value }))} />
-                <InputField label="Salutation" value={state.salutation} onChange={(value) => setState((prev) => ({ ...prev, salutation: value }))} />
-                <TextAreaField label="Summary" value={state.summaryIntro} onChange={(value) => setState((prev) => ({ ...prev, summaryIntro: value }))} rows={3} />
+                <InputField label="Confidentiality Line" value={state.headerConfidentiality} onChange={(value) => mutateState((prev) => ({ ...prev, headerConfidentiality: value }))} />
+                <InputField label="Subject Line" value={state.headerSubject} onChange={(value) => mutateState((prev) => ({ ...prev, headerSubject: value }))} />
+                <TextAreaField label="Addressee Lines" value={state.addresseeLines.join("\n")} onChange={(text) => updateArrayField("addresseeLines", text)} rows={4} />
+                <InputField label="Date" value={state.dateLine} onChange={(value) => mutateState((prev) => ({ ...prev, dateLine: value }))} />
+                <InputField label="Project Title" value={state.projectTitle} onChange={(value) => mutateState((prev) => ({ ...prev, projectTitle: value }))} />
+                <InputField label="Salutation" value={state.salutation} onChange={(value) => mutateState((prev) => ({ ...prev, salutation: value }))} />
+                <TextAreaField label="Summary" value={state.summaryIntro} onChange={(value) => mutateState((prev) => ({ ...prev, summaryIntro: value }))} rows={3} />
               </div>
             </SectionCard>
 
             <SectionCard title="Project Snapshot" description="Key parties and use of proceeds">
               <div className="space-y-3">
-                <InputField label="Sponsor" value={state.projectOverview.sponsor} onChange={(value) => setState((prev) => ({ ...prev, projectOverview: { ...prev.projectOverview, sponsor: value } }))} />
-                <InputField label="Project" value={state.projectOverview.project} onChange={(value) => setState((prev) => ({ ...prev, projectOverview: { ...prev.projectOverview, project: value } }))} />
-                <InputField label="Facility" value={state.projectOverview.facility} onChange={(value) => setState((prev) => ({ ...prev, projectOverview: { ...prev.projectOverview, facility: value } }))} />
-                <InputField label="Use of Proceeds" value={state.projectOverview.use_of_proceeds} onChange={(value) => setState((prev) => ({ ...prev, projectOverview: { ...prev.projectOverview, use_of_proceeds: value } }))} />
-                <InputField label="Draw Sequence" value={state.projectOverview.draw_sequence} onChange={(value) => setState((prev) => ({ ...prev, projectOverview: { ...prev.projectOverview, draw_sequence: value } }))} />
+                <InputField label="Sponsor" value={state.projectOverview.sponsor} onChange={(value) => mutateState((prev) => ({ ...prev, projectOverview: { ...prev.projectOverview, sponsor: value } }))} />
+                <InputField label="Project" value={state.projectOverview.project} onChange={(value) => mutateState((prev) => ({ ...prev, projectOverview: { ...prev.projectOverview, project: value } }))} />
+                <InputField label="Facility" value={state.projectOverview.facility} onChange={(value) => mutateState((prev) => ({ ...prev, projectOverview: { ...prev.projectOverview, facility: value } }))} />
+                <InputField label="Use of Proceeds" value={state.projectOverview.use_of_proceeds} onChange={(value) => mutateState((prev) => ({ ...prev, projectOverview: { ...prev.projectOverview, use_of_proceeds: value } }))} />
+                <InputField label="Draw Sequence" value={state.projectOverview.draw_sequence} onChange={(value) => mutateState((prev) => ({ ...prev, projectOverview: { ...prev.projectOverview, draw_sequence: value } }))} />
               </div>
             </SectionCard>
 
-            <SectionCard title="Funding Table" description="Sources & uses with totals auto-calculated">
-              <FundingEditor
-                title="Sources"
-                rows={state.sources}
-                onChange={(index, row) => updateFundingRow("sources", index, row)}
-                onAddRow={() => addFundingRow("sources")}
-              />
-              <FundingEditor
-                title="Uses"
-                rows={state.uses}
-                onChange={(index, row) => updateFundingRow("uses", index, row)}
-                onAddRow={() => addFundingRow("uses")}
-              />
+            <SectionCard title="Funding Plan" description="Sources & uses with totals auto-calculated">
+              <FundingEditor title="Sources" rows={state.sources} onChange={(index, row) => updateFundingRow("sources", index, row)} onAddRow={() => addFundingRow("sources")} />
+              <FundingEditor title="Uses" rows={state.uses} onChange={(index, row) => updateFundingRow("uses", index, row)} onAddRow={() => addFundingRow("uses")} />
             </SectionCard>
 
             <SectionCard title="Highlights & Clauses" description="Narrative bullets and clause selections">
-              <TextAreaField
-                label="Facility Highlights"
-                value={state.facilityHighlights.join("\n")}
-                onChange={(text) => updateArrayField("facilityHighlights", text)}
-                rows={5}
-              />
-              <ClauseCheckboxes label="Pricing" options={clauseOptions("pricing")} selected={state.pricingKeys} onToggle={(value) => toggleClause("pricingKeys", value)} />
-              <ClauseCheckboxes label="Covenants" options={clauseOptions("covenants")} selected={state.covenantKeys} onToggle={(value) => toggleClause("covenantKeys", value)} />
-              <ClauseCheckboxes label="Security" options={clauseOptions("security")} selected={state.securityKeys} onToggle={(value) => toggleClause("securityKeys", value)} />
-              <ClauseCheckboxes label="Conditions Precedent" options={clauseOptions("conditions_precedent")} selected={state.cpKeys} onToggle={(value) => toggleClause("cpKeys", value)} />
-              <ClauseCheckboxes label="Offtake" options={clauseOptions("offtake")} selected={state.offtakeKeys} onToggle={(value) => toggleClause("offtakeKeys", value)} />
-              <SingleSelect label="Governing Law" options={clauseOptions("governing_law")} value={state.governingLawKey} onChange={(value) => setState((prev) => ({ ...prev, governingLawKey: value }))} />
-              <SingleSelect label="Disclaimer" options={clauseOptions("disclaimers")} value={state.disclaimerKey} onChange={(value) => setState((prev) => ({ ...prev, disclaimerKey: value }))} />
-              <ClauseCheckboxes label="Binding Sections" options={clauseOptions("binding")} selected={state.bindingKeys} onToggle={(value) => toggleClause("bindingKeys", value)} />
+              <TextAreaField label="Facility Highlights" value={state.facilityHighlights.join("\n")} onChange={(text) => updateArrayField("facilityHighlights", text)} rows={5} />
+              <ClauseCheckboxes label="Pricing" options={clauseOptions("pricing")} selected={state.pricingKeys} onToggle={(value) => mutateState((prev) => ({ ...prev, pricingKeys: prev.pricingKeys.includes(value) ? prev.pricingKeys.filter((item) => item !== value) : [...prev.pricingKeys, value] }))} />
+              <ClauseCheckboxes label="Covenants" options={clauseOptions("covenants")} selected={state.covenantKeys} onToggle={(value) => mutateState((prev) => ({ ...prev, covenantKeys: prev.covenantKeys.includes(value) ? prev.covenantKeys.filter((item) => item !== value) : [...prev.covenantKeys, value] }))} />
+              <ClauseCheckboxes label="Security" options={clauseOptions("security")} selected={state.securityKeys} onToggle={(value) => mutateState((prev) => ({ ...prev, securityKeys: prev.securityKeys.includes(value) ? prev.securityKeys.filter((item) => item !== value) : [...prev.securityKeys, value] }))} />
+              <ClauseCheckboxes label="Conditions Precedent" options={clauseOptions("conditions_precedent")} selected={state.cpKeys} onToggle={(value) => mutateState((prev) => ({ ...prev, cpKeys: prev.cpKeys.includes(value) ? prev.cpKeys.filter((item) => item !== value) : [...prev.cpKeys, value] }))} />
+              <ClauseCheckboxes label="Offtake" options={clauseOptions("offtake")} selected={state.offtakeKeys} onToggle={(value) => mutateState((prev) => ({ ...prev, offtakeKeys: prev.offtakeKeys.includes(value) ? prev.offtakeKeys.filter((item) => item !== value) : [...prev.offtakeKeys, value] }))} />
+              <SingleSelect label="Governing Law" value={state.governingLawKey} options={singleOptions("governing_law")} onChange={(value) => mutateState((prev) => ({ ...prev, governingLawKey: value }))} />
+              <SingleSelect label="Disclaimer" value={state.disclaimerKey} options={singleOptions("disclaimers")} onChange={(value) => mutateState((prev) => ({ ...prev, disclaimerKey: value }))} />
+              <ClauseCheckboxes label="Binding Sections" options={clauseOptions("binding")} selected={state.bindingKeys} onToggle={(value) => mutateState((prev) => ({ ...prev, bindingKeys: prev.bindingKeys.includes(value) ? prev.bindingKeys.filter((item) => item !== value) : [...prev.bindingKeys, value] }))} />
               <div className="grid gap-3 md:grid-cols-2">
-                <InputField label="Closing Signoff" value={state.closing.signoff} onChange={(value) => setState((prev) => ({ ...prev, closing: { ...prev.closing, signoff: value } }))} />
-                <InputField label="Lender" value={state.closing.lender} onChange={(value) => setState((prev) => ({ ...prev, closing: { ...prev.closing, lender: value } }))} />
+                <InputField label="Closing Signoff" value={state.closing.signoff} onChange={(value) => mutateState((prev) => ({ ...prev, closing: { ...prev.closing, signoff: value } }))} />
+                <InputField label="Lender" value={state.closing.lender} onChange={(value) => mutateState((prev) => ({ ...prev, closing: { ...prev.closing, lender: value } }))} />
               </div>
             </SectionCard>
           </div>
 
           <div className="space-y-4 lg:sticky lg:top-6">
             <div className="flex flex-wrap gap-3 justify-end">
-              <button
-                type="button"
-                onClick={downloadMarkdown}
-                className="inline-flex items-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-              >
+              <button type="button" onClick={downloadMarkdown} className="inline-flex items-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
                 Download Markdown
               </button>
-              <button
-                type="button"
-                onClick={downloadDocx}
-                disabled={isExporting}
-                className="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-              >
+              <button type="button" onClick={downloadDocx} disabled={isExporting} className="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60">
                 {isExporting ? "Preparing DOCX…" : "Download DOCX"}
               </button>
             </div>
-            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-              <div className="flex items-center justify-between mb-4">
+
+            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+              <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-indigo-600">Live Preview</p>
                   <h2 className="text-xl font-semibold text-slate-900">Formatted Term Sheet</h2>
                 </div>
-                <p className="text-xs text-slate-500">Autosaves as you type</p>
+                <p className="text-xs text-slate-500">Markdown → DOCX ready</p>
               </div>
               <article className="markdown-body">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
               </article>
+            </section>
+
+            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Integrity Checks</h3>
+              <dl className="space-y-2 text-sm text-slate-600">
+                <div className="flex justify-between">
+                  <dt>Total clauses selected</dt>
+                  <dd className="font-semibold">{stats.clausesSelected}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt>Binding sections</dt>
+                  <dd className="font-semibold">{stats.bindingCount}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt>Sources (USD m)</dt>
+                  <dd className="font-semibold">{stats.totalSources.toFixed(0)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt>Uses (USD m)</dt>
+                  <dd className="font-semibold">{stats.totalUses.toFixed(0)}</dd>
+                </div>
+                <div className="flex justify-between text-xs text-slate-400">
+                  <dt>Autosave status</dt>
+                  <dd>{isHydrated ? "Active" : "Syncing"}</dd>
+                </div>
+              </dl>
+              {stats.totalSources !== stats.totalUses && (
+                <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  Funding table is unbalanced. Update totals before exporting.
+                </p>
+              )}
             </section>
           </div>
         </div>

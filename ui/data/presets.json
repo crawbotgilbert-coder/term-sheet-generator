@@ -1,0 +1,163 @@
+[
+  {
+    "id": "kgl",
+    "label": "KGL Resources – Junior Facility",
+    "state": {
+      "headerConfidentiality": "STRICTLY PRIVATE & CONFIDENTIAL",
+      "headerSubject": "SUBJECT TO CONTRACT",
+      "addresseeLines": [
+        "Board of Directors",
+        "KGL Resources Limited",
+        "Level 7, 167 Eagle Street",
+        "Brisbane QLD 4000, Australia"
+      ],
+      "dateLine": "6 February 2026",
+      "projectTitle": "Project Kairos – Jervois Base Metal Project (the \"Term Sheet\")",
+      "salutation": "Dear Board Members,",
+      "summaryIntro": "Mercuria proposes the following junior facility and aligned offtake arrangements to bridge the remaining capital expenditure for the Jervois base metals project once equity and senior streaming facilities are fully drawn.",
+      "projectOverview": {
+        "sponsor": "KGL Resources Limited (\"KGL\")",
+        "project": "Development of the Jervois copper concentrate project in the Northern Territory, Australia.",
+        "facility": "USD 50,000,000 junior second-lien term loan (the \"Facility\").",
+        "use_of_proceeds": "Last-mile construction spend and commissioning contingency.",
+        "draw_sequence": "Junior Facility is drawn only after equity and senior stream commitments have been utilised."
+      },
+      "sources": [
+        { "name": "Project Equity", "amount": 111 },
+        { "name": "Senior Stream Facilities", "amount": 333 },
+        { "name": "Junior Facility (Mercuria)", "amount": 50 },
+        { "name": "Standby Overrun Facility", "amount": 37 }
+      ],
+      "uses": [
+        { "name": "Project CAPEX", "amount": 364 },
+        { "name": "OC Mining & Commissioning", "amount": 130 },
+        { "name": "Cost Overrun Contingency", "amount": 37 }
+      ],
+      "facilityHighlights": [
+        "Borrower: KGL Resources Limited (or a designated holdco) with guarantees from key project subsidiaries.",
+        "Currency: USD.",
+        "Availability: Single or multiple utilisations during the construction window, subject to conditions precedent.",
+        "Ranking: Second lien behind the senior streaming package with terms governed by an intercreditor agreement.",
+        "Repayment: Monthly amortisation via offtake deductions after the grace period."
+      ],
+      "pricingKeys": ["kgl_junior"],
+      "covenantKeys": ["coverage_ratio", "cash_sweep", "negative_pledge", "sanctions", "project_mac"],
+      "securityKeys": ["kisenda_first_lien"],
+      "cpKeys": ["project_prepayment"],
+      "offtakeKeys": ["restructure_ack"],
+      "governingLawKey": "english_default",
+      "disclaimerKey": "non_binding",
+      "bindingKeys": ["confidentiality", "exclusivity", "fees_expenses"],
+      "closing": {
+        "signoff": "Yours faithfully,",
+        "lender": "Mercuria Asia Group Holdings (Pte.) Ltd"
+      }
+    }
+  },
+  {
+    "id": "cariboo",
+    "label": "ODV Cariboo – Gold Prepay",
+    "state": {
+      "headerConfidentiality": "STRICTLY PRIVATE & CONFIDENTIAL",
+      "headerSubject": "INDICATIVE GOLD PREPAY TERM SHEET",
+      "addresseeLines": [
+        "Board of Directors",
+        "Osisko Development Corp.",
+        "1100 Melville Street",
+        "Vancouver, BC V6E 4A6, Canada"
+      ],
+      "dateLine": "18 January 2026",
+      "projectTitle": "Cariboo Gold Project – Merchant Prepayment Term Sheet",
+      "salutation": "Dear Directors,",
+      "summaryIntro": "Mercuria is pleased to outline the key commercial terms for a gold prepayment facility linked to the Cariboo project, aligned with our offtake partnership and staged production ramp-up.",
+      "projectOverview": {
+        "sponsor": "Osisko Development Corp. (\"ODV\")",
+        "project": "Restart and expansion of the Cariboo underground gold project in British Columbia, Canada.",
+        "facility": "USD 120,000,000 senior secured gold prepayment (15% advance rate).",
+        "use_of_proceeds": "Fund mill restart, underground development, and working capital.",
+        "draw_sequence": "Prepayment draws after completion of EPCM milestones and delivery of updated technical report."
+      },
+      "sources": [
+        { "name": "ODV Equity", "amount": 80 },
+        { "name": "Senior Project Debt", "amount": 220 },
+        { "name": "Mercuria Gold Prepay", "amount": 120 }
+      ],
+      "uses": [
+        { "name": "Process Plant & Tailings", "amount": 210 },
+        { "name": "Underground Development", "amount": 140 },
+        { "name": "Working Capital / Fees", "amount": 70 }
+      ],
+      "facilityHighlights": [
+        "Borrower: Osisko Development Corp. with guarantees from key project subsidiaries.",
+        "Tenor: 42 months including 12-month grace, amortised via offtake deductions.",
+        "Commodity: Gold concentrate deliveries with optional doré conversion.",
+        "Ramp-Up Support: 6-month P90 production buffer built into delivery schedule.",
+        "Intercreditor: Pari passu with senior project debt except for cash sweep priority."
+      ],
+      "pricingKeys": ["cariboo_tiered"],
+      "covenantKeys": ["coverage_ratio", "sanctions", "project_mac"],
+      "securityKeys": ["kisenda_first_lien"],
+      "cpKeys": ["project_prepayment"],
+      "offtakeKeys": ["restructure_ack"],
+      "governingLawKey": "ontario_option",
+      "disclaimerKey": "non_binding",
+      "bindingKeys": ["confidentiality", "fees_expenses"],
+      "closing": {
+        "signoff": "Sincerely,",
+        "lender": "Mercuria Energy Trading SA"
+      }
+    }
+  },
+  {
+    "id": "yanqul",
+    "label": "Yanqul Copper – Takeover Bridge",
+    "state": {
+      "headerConfidentiality": "STRICTLY PRIVATE & CONFIDENTIAL",
+      "headerSubject": "CERTAIN FUNDS ACQUISITION BRIDGE",
+      "addresseeLines": [
+        "Board of Directors",
+        "Z Metal Holdings plc",
+        "20 Cannon Street",
+        "London EC4M 6XD, United Kingdom"
+      ],
+      "dateLine": "12 March 2026",
+      "projectTitle": "Yanqul Copper Project – Acquisition Bridge Financing",
+      "salutation": "Dear Sirs,",
+      "summaryIntro": "Further to our discussions regarding the acquisition of the Yanqul Copper Project, Mercuria submits this certain funds bridge facility term sheet to support your Rule 2.7 announcement and subsequent closing.",
+      "projectOverview": {
+        "sponsor": "Z Metal Holdings plc",
+        "project": "Acquisition of 60% interest in the Yanqul Copper Project in Oman.",
+        "facility": "USD 100,000,000 bridge facility (lesser of 60% of purchase price).",
+        "use_of_proceeds": "Finance cash consideration under the UK Takeover Code offer and associated costs.",
+        "draw_sequence": "Single draw on or before Offer closing; equity contribution drawn first."
+      },
+      "sources": [
+        { "name": "Equity Contribution", "amount": 65 },
+        { "name": "Mercuria Bridge Facility", "amount": 100 }
+      ],
+      "uses": [
+        { "name": "Target Consideration", "amount": 150 },
+        { "name": "Fees & Expenses", "amount": 15 }
+      ],
+      "facilityHighlights": [
+        "Borrower: Z Metal Holdings plc with guarantee from acquisition vehicle.",
+        "Certain Funds: Limited drawstops during Rule 2.7 period (illegality, insolvency, Offer lapse).",
+        "Cash Sweep: 25% of Target cash above minimum applied quarterly to prepay facility.",
+        "Term: 12-month bullet with optional extension to 18 months.",
+        "Exit: Refinanced by project debt or offtake-linked mezzanine."
+      ],
+      "pricingKeys": ["yanqul_bridge"],
+      "covenantKeys": ["cash_sweep", "negative_pledge", "sanctions", "project_mac"],
+      "securityKeys": ["kisenda_first_lien"],
+      "cpKeys": ["project_prepayment"],
+      "offtakeKeys": ["restructure_ack"],
+      "governingLawKey": "english_default",
+      "disclaimerKey": "non_binding",
+      "bindingKeys": ["confidentiality", "exclusivity", "fees_expenses"],
+      "closing": {
+        "signoff": "Yours faithfully,",
+        "lender": "Mercuria Energy Trading SA"
+      }
+    }
+  }
+]
